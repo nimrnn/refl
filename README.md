@@ -58,7 +58,7 @@ In this example, `q` was reflected in the response body while `page` was not.
 | `-input` | stdin | File containing one URL per line. |
 | `-workers` | `5` | Number of concurrent workers. |
 | `-rate` | `10` | Maximum requests per second across all workers. |
-| `-output` | none | Reserved for saving results to a file. Output is currently written to stdout only. |
+| `-output` | none | Append results to a file. URLs already present in the file are skipped. |
 
 Blank lines in the input are ignored. Press `Ctrl+C` to stop early.
 

@@ -48,8 +48,13 @@ func run(args []string, stderr io.Writer) error {
 		return err
 	}
 
+	if len(urls) == 0 {
+		return fmt.Errorf("No urls to probe.")
+	}
+
 	jc := make(chan string)
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	start := time.Now()
 	for i := 0; i < o.Workers; i++ {
@@ -61,11 +66,42 @@ func run(args []string, stderr io.Writer) error {
 			for u := range jc {
 				r, err := p.ProbeParams(ctx, u)
 				if err != nil {
-					fmt.Printf("Failed for %s. Continue anyway.", u)
+					fmt.Printf("Failed for %s. Continue anyway.\n", u)
 					continue
 				}
 
 				fmt.Printf("%s\t%v\n", r.Url, r.Params)
+				if o.Output != "" {
+					// serialize the read-check-append so workers don't race
+					// on the file or write the same url twice
+					func() {
+						mu.Lock()
+						defer mu.Unlock()
+
+						existing, err := load.LoadExisting(o.Output)
+						if err != nil {
+							fmt.Println("Can't open file: ", err)
+							return
+						}
+
+						if existing[r.Url] {
+							return
+						}
+
+						file, err := os.OpenFile(o.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+						if err != nil {
+							fmt.Println("Can't open file: ", err)
+							return
+						}
+						defer file.Close()
+
+						existing[r.Url] = true
+
+						if _, err := fmt.Fprintf(file, "%s\t%v\n", r.Url, r.Params); err == nil {
+							fmt.Fprintln(stderr, "\nSaved to file: ", o.Output)
+						}
+					}()
+				}
 			}
 		}()
 	}
