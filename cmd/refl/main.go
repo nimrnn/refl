@@ -82,7 +82,7 @@ func run(args []string, stderr io.Writer) error {
 	}()
 
 	wg.Wait()
-	fmt.Println("Duration: ", time.Since(start))
+	fmt.Println("\nDuration: ", time.Since(start))
 
 	return nil
 }
